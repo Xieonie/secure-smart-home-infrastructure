@@ -1,0 +1,427 @@
+# Home Assistant Configuration for Secure Smart Home Infrastructure
+# This configuration focuses on security, monitoring, and device management
+
+# Core Configuration
+homeassistant:
+  name: "Secure Smart Home"
+  latitude: !secret home_latitude
+  longitude: !secret home_longitude
+  elevation: !secret home_elevation
+  unit_system: metric
+  time_zone: !secret time_zone
+  country: !secret country_code
+  
+  # Security settings
+  auth_providers:
+    - type: homeassistant
+    - type: trusted_networks
+      trusted_networks:
+        - 192.168.10.0/24  # Management VLAN
+        - 192.168.20.0/24  # Trusted VLAN
+      allow_bypass_login: false
+  
+  # External URLs for secure access
+  external_url: !secret external_url
+  internal_url: !secret internal_url
+
+# Default configuration
+default_config:
+
+# Enable frontend
+frontend:
+  themes: !include_dir_merge_named themes
+
+# Enable configuration UI
+config:
+
+# Enable mobile app support
+mobile_app:
+
+# Enable person tracking
+person:
+
+# Enable zones
+zone:
+
+# HTTP Configuration with security headers
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 192.168.10.0/24
+    - 192.168.20.0/24
+  ip_ban_enabled: true
+  login_attempts_threshold: 5
+  cors_allowed_origins:
+    - !secret external_url
+
+# Recorder configuration for security monitoring
+recorder:
+  db_url: !secret database_url
+  purge_keep_days: 30
+  include:
+    domains:
+      - person
+      - device_tracker
+      - binary_sensor
+      - sensor
+      - switch
+      - light
+      - lock
+      - alarm_control_panel
+      - camera
+    entity_globs:
+      - sensor.*_security_*
+      - binary_sensor.*_motion
+      - binary_sensor.*_door
+      - binary_sensor.*_window
+
+# History configuration
+history:
+  include:
+    domains:
+      - person
+      - device_tracker
+      - binary_sensor
+      - sensor
+      - switch
+      - light
+      - lock
+      - alarm_control_panel
+
+# Logbook for security events
+logbook:
+  include:
+    domains:
+      - person
+      - device_tracker
+      - lock
+      - alarm_control_panel
+      - binary_sensor
+
+# Network device tracking with security focus
+device_tracker:
+  - platform: nmap_tracker
+    hosts: 
+      - 192.168.30.0/24  # IoT VLAN
+      - 192.168.40.0/24  # Security VLAN
+    home_interval: 10
+    consider_home: 180
+    scan_options: "-F --host-timeout 5s"
+    new_device_defaults:
+      track_new_devices: false
+      hide_if_away: false
+
+# Network monitoring sensors
+sensor:
+  # System monitoring
+  - platform: systemmonitor
+    resources:
+      - type: disk_use_percent
+        arg: /
+      - type: memory_use_percent
+      - type: processor_use
+      - type: load_1m
+      - type: load_5m
+      - type: load_15m
+      - type: network_in
+        arg: eth0
+      - type: network_out
+        arg: eth0
+
+  # Network security monitoring
+  - platform: command_line
+    name: "IoT Devices Count"
+    command: "nmap -sn 192.168.30.0/24 | grep -c 'Nmap scan report' || echo 0"
+    scan_interval: 300
+    
+  - platform: command_line
+    name: "Security Devices Count"
+    command: "nmap -sn 192.168.40.0/24 | grep -c 'Nmap scan report' || echo 0"
+    scan_interval: 300
+    
+  - platform: command_line
+    name: "Firewall Rules Count"
+    command: "iptables -L | wc -l"
+    scan_interval: 600
+
+  # Security log monitoring
+  - platform: command_line
+    name: "Failed Login Attempts"
+    command: "grep 'Invalid user' /var/log/auth.log | grep $(date +'%b %d') | wc -l || echo 0"
+    scan_interval: 300
+
+# Binary sensors for security monitoring
+binary_sensor:
+  # Network anomaly detection
+  - platform: template
+    sensors:
+      network_anomaly:
+        friendly_name: "Network Anomaly Detected"
+        value_template: >
+          {{ states('sensor.iot_devices_count') | int > 50 or
+             states('sensor.failed_login_attempts') | int > 10 }}
+        device_class: problem
+
+  # High system load detection
+  - platform: template
+    sensors:
+      high_system_load:
+        friendly_name: "High System Load"
+        value_template: >
+          {{ states('sensor.processor_use') | float > 80 or
+             states('sensor.memory_use_percent') | float > 90 }}
+        device_class: problem
+
+# Automation for security monitoring
+automation:
+  # Network anomaly response
+  - alias: "Network Anomaly Detection"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.network_anomaly
+        to: 'on'
+    action:
+      - service: notify.security_team
+        data:
+          title: "🚨 Network Anomaly Detected"
+          message: >
+            Network anomaly detected:
+            IoT Devices: {{ states('sensor.iot_devices_count') }}
+            Failed Logins: {{ states('sensor.failed_login_attempts') }}
+      - service: script.security_incident_response
+
+  # New device detection
+  - alias: "New Device Detected"
+    trigger:
+      - platform: event
+        event_type: device_tracker_new_device
+    action:
+      - service: script.quarantine_new_device
+        data:
+          device_id: "{{ trigger.event.data.entity_id }}"
+      - service: notify.admin
+        data:
+          title: "🔍 New Device Detected"
+          message: >
+            New device detected: {{ trigger.event.data.entity_id }}
+            MAC: {{ trigger.event.data.mac }}
+            IP: {{ trigger.event.data.ip }}
+
+  # Security device offline alert
+  - alias: "Security Device Offline"
+    trigger:
+      - platform: state
+        entity_id: 
+          - device_tracker.security_camera_1
+          - device_tracker.security_camera_2
+          - device_tracker.door_sensor_main
+        to: 'not_home'
+        for: '00:05:00'
+    action:
+      - service: notify.security_team
+        data:
+          title: "⚠️ Security Device Offline"
+          message: >
+            Security device {{ trigger.entity_id }} has been offline for 5 minutes.
+
+  # High system load alert
+  - alias: "High System Load Alert"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.high_system_load
+        to: 'on'
+        for: '00:05:00'
+    action:
+      - service: notify.admin
+        data:
+          title: "⚠️ High System Load"
+          message: >
+            System load is high:
+            CPU: {{ states('sensor.processor_use') }}%
+            Memory: {{ states('sensor.memory_use_percent') }}%
+
+  # Daily security report
+  - alias: "Daily Security Report"
+    trigger:
+      - platform: time
+        at: "08:00:00"
+    action:
+      - service: notify.admin
+        data:
+          title: "📊 Daily Security Report"
+          message: >
+            Security Status Report:
+            IoT Devices: {{ states('sensor.iot_devices_count') }}
+            Security Devices: {{ states('sensor.security_devices_count') }}
+            Failed Logins (24h): {{ states('sensor.failed_login_attempts') }}
+            System Load: {{ states('sensor.processor_use') }}%
+
+# Scripts for security responses
+script:
+  # Quarantine new device
+  quarantine_new_device:
+    alias: "Quarantine New Device"
+    sequence:
+      - service: shell_command.move_device_to_quarantine
+        data:
+          device_mac: "{{ device_mac }}"
+      - delay: '00:00:05'
+      - service: shell_command.scan_device_vulnerabilities
+        data:
+          device_ip: "{{ device_ip }}"
+
+  # Security incident response
+  security_incident_response:
+    alias: "Security Incident Response"
+    sequence:
+      - service: shell_command.capture_network_traffic
+      - service: shell_command.backup_security_logs
+      - service: notify.security_team
+        data:
+          title: "🚨 Security Incident Response Activated"
+          message: "Automated security response has been triggered. Check logs for details."
+
+  # Emergency lockdown
+  emergency_lockdown:
+    alias: "Emergency Lockdown"
+    sequence:
+      - service: shell_command.enable_emergency_firewall_rules
+      - service: lock.lock
+        target:
+          entity_id: all
+      - service: alarm_control_panel.alarm_arm_away
+        target:
+          entity_id: all
+      - service: notify.security_team
+        data:
+          title: "🔒 EMERGENCY LOCKDOWN ACTIVATED"
+          message: "Emergency lockdown has been activated. All doors locked, alarm armed."
+
+# Shell commands for security operations
+shell_command:
+  move_device_to_quarantine: '/opt/smart-home/scripts/quarantine-device.sh {{ device_mac }}'
+  scan_device_vulnerabilities: '/opt/smart-home/scripts/scan-device.sh {{ device_ip }}'
+  capture_network_traffic: '/opt/smart-home/scripts/capture-traffic.sh'
+  backup_security_logs: '/opt/smart-home/scripts/backup-logs.sh'
+  enable_emergency_firewall_rules: '/opt/smart-home/scripts/emergency-firewall.sh'
+
+# Notification services
+notify:
+  - name: security_team
+    platform: smtp
+    server: !secret smtp_server
+    port: !secret smtp_port
+    timeout: 15
+    sender: !secret smtp_sender
+    encryption: starttls
+    username: !secret smtp_username
+    password: !secret smtp_password
+    recipient:
+      - !secret security_email
+    sender_name: "Smart Home Security"
+
+  - name: admin
+    platform: smtp
+    server: !secret smtp_server
+    port: !secret smtp_port
+    timeout: 15
+    sender: !secret smtp_sender
+    encryption: starttls
+    username: !secret smtp_username
+    password: !secret smtp_password
+    recipient:
+      - !secret admin_email
+    sender_name: "Smart Home Admin"
+
+# Security panel configuration
+alarm_control_panel:
+  - platform: manual
+    name: "Home Security"
+    code: !secret alarm_code
+    code_arm_required: false
+    arming_time: 30
+    delay_time: 20
+    trigger_time: 4
+    disarmed:
+      trigger_time: 0
+    armed_home:
+      arming_time: 0
+      delay_time: 0
+
+# Camera integration for security monitoring
+camera:
+  - platform: generic
+    name: "Security Camera 1"
+    still_image_url: "http://192.168.40.10/snapshot.jpg"
+    stream_source: "rtsp://192.168.40.10:554/stream"
+    username: !secret camera_username
+    password: !secret camera_password
+
+# Input booleans for security modes
+input_boolean:
+  security_mode:
+    name: "Enhanced Security Mode"
+    icon: mdi:shield-check
+  
+  guest_mode:
+    name: "Guest Mode"
+    icon: mdi:account-multiple
+  
+  maintenance_mode:
+    name: "Maintenance Mode"
+    icon: mdi:wrench
+
+# Input numbers for security thresholds
+input_number:
+  max_iot_devices:
+    name: "Maximum IoT Devices"
+    min: 10
+    max: 100
+    step: 1
+    initial: 50
+    icon: mdi:devices
+  
+  login_attempt_threshold:
+    name: "Login Attempt Threshold"
+    min: 3
+    max: 20
+    step: 1
+    initial: 10
+    icon: mdi:account-alert
+
+# Groups for organization
+group:
+  security_sensors:
+    name: "Security Sensors"
+    entities:
+      - binary_sensor.network_anomaly
+      - binary_sensor.high_system_load
+      - sensor.iot_devices_count
+      - sensor.security_devices_count
+      - sensor.failed_login_attempts
+
+  security_controls:
+    name: "Security Controls"
+    entities:
+      - input_boolean.security_mode
+      - input_boolean.guest_mode
+      - input_boolean.maintenance_mode
+      - script.emergency_lockdown
+
+# Lovelace dashboard configuration
+lovelace:
+  mode: yaml
+  resources:
+    - url: /hacsfiles/mini-graph-card/mini-graph-card-bundle.js
+      type: module
+    - url: /hacsfiles/button-card/button-card.js
+      type: module
+
+# Logger configuration for security events
+logger:
+  default: warning
+  logs:
+    homeassistant.components.device_tracker: info
+    homeassistant.components.automation: info
+    homeassistant.components.script: info
+    custom_components.security_monitor: debug
