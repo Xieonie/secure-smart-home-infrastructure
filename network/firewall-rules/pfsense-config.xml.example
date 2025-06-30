@@ -1,0 +1,767 @@
+<?xml version="1.0"?>
+<!-- pfSense Configuration Example for Secure Smart Home Infrastructure -->
+<!-- This is a partial configuration focusing on VLAN and firewall rules -->
+<!-- IMPORTANT: This is an example - adapt to your specific environment -->
+
+<pfsense>
+  <version>21.05</version>
+  <lastchange></lastchange>
+  
+  <!-- Interface Configuration -->
+  <interfaces>
+    <wan>
+      <enable></enable>
+      <if>em0</if>
+      <mtu></mtu>
+      <ipaddr>dhcp</ipaddr>
+      <ipaddrv6>dhcp6</ipaddrv6>
+      <subnet></subnet>
+      <gateway></gateway>
+      <blockpriv>on</blockpriv>
+      <blockbogons>on</blockbogons>
+      <dhcphostname></dhcphostname>
+      <media></media>
+      <mediaopt></mediaopt>
+      <dhcp6-ia-pd-len>0</dhcp6-ia-pd-len>
+    </wan>
+    
+    <lan_mgmt>
+      <enable></enable>
+      <if>em1.10</if>
+      <ipaddr>192.168.10.1</ipaddr>
+      <subnet>24</subnet>
+      <media></media>
+      <mediaopt></mediaopt>
+      <descr>Management VLAN</descr>
+    </lan_mgmt>
+    
+    <lan_trusted>
+      <enable></enable>
+      <if>em1.20</if>
+      <ipaddr>192.168.20.1</ipaddr>
+      <subnet>24</subnet>
+      <media></media>
+      <mediaopt></mediaopt>
+      <descr>Trusted Devices VLAN</descr>
+    </lan_trusted>
+    
+    <lan_iot>
+      <enable></enable>
+      <if>em1.30</if>
+      <ipaddr>192.168.30.1</ipaddr>
+      <subnet>24</subnet>
+      <media></media>
+      <mediaopt></mediaopt>
+      <descr>IoT Devices VLAN</descr>
+    </lan_iot>
+    
+    <lan_security>
+      <enable></enable>
+      <if>em1.40</if>
+      <ipaddr>192.168.40.1</ipaddr>
+      <subnet>24</subnet>
+      <media></media>
+      <mediaopt></mediaopt>
+      <descr>Security Devices VLAN</descr>
+    </lan_security>
+    
+    <lan_guest>
+      <enable></enable>
+      <if>em1.50</if>
+      <ipaddr>192.168.50.1</ipaddr>
+      <subnet>24</subnet>
+      <media></media>
+      <mediaopt></mediaopt>
+      <descr>Guest Network VLAN</descr>
+    </lan_guest>
+    
+    <lan_quarantine>
+      <enable></enable>
+      <if>em1.60</if>
+      <ipaddr>192.168.60.1</ipaddr>
+      <subnet>24</subnet>
+      <media></media>
+      <mediaopt></mediaopt>
+      <descr>Quarantine VLAN</descr>
+    </lan_quarantine>
+  </interfaces>
+
+  <!-- VLAN Configuration -->
+  <vlans>
+    <vlan>
+      <if>em1</if>
+      <tag>10</tag>
+      <pcp></pcp>
+      <descr>Management</descr>
+      <vlanif>em1.10</vlanif>
+    </vlan>
+    <vlan>
+      <if>em1</if>
+      <tag>20</tag>
+      <pcp></pcp>
+      <descr>Trusted-Devices</descr>
+      <vlanif>em1.20</vlanif>
+    </vlan>
+    <vlan>
+      <if>em1</if>
+      <tag>30</tag>
+      <pcp></pcp>
+      <descr>IoT-Devices</descr>
+      <vlanif>em1.30</vlanif>
+    </vlan>
+    <vlan>
+      <if>em1</if>
+      <tag>40</tag>
+      <pcp></pcp>
+      <descr>Security-Devices</descr>
+      <vlanif>em1.40</vlanif>
+    </vlan>
+    <vlan>
+      <if>em1</if>
+      <tag>50</tag>
+      <pcp></pcp>
+      <descr>Guest-Network</descr>
+      <vlanif>em1.50</vlanif>
+    </vlan>
+    <vlan>
+      <if>em1</if>
+      <tag>60</tag>
+      <pcp></pcp>
+      <descr>Quarantine</descr>
+      <vlanif>em1.60</vlanif>
+    </vlan>
+  </vlans>
+
+  <!-- Firewall Rules -->
+  <filter>
+    <!-- WAN Rules -->
+    <rule>
+      <id></id>
+      <tracker>1000000001</tracker>
+      <type>block</type>
+      <interface>wan</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>any</protocol>
+      <source>
+        <any></any>
+      </source>
+      <destination>
+        <any></any>
+      </destination>
+      <descr>Block all WAN to LAN</descr>
+    </rule>
+
+    <!-- Management VLAN Rules -->
+    <rule>
+      <id></id>
+      <tracker>1000000101</tracker>
+      <type>pass</type>
+      <interface>lan_mgmt</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>any</protocol>
+      <source>
+        <network>lan_mgmt</network>
+      </source>
+      <destination>
+        <any></any>
+      </destination>
+      <descr>Allow Management VLAN to any</descr>
+    </rule>
+
+    <!-- Trusted Devices VLAN Rules -->
+    <rule>
+      <id></id>
+      <tracker>1000000201</tracker>
+      <type>pass</type>
+      <interface>lan_trusted</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>any</protocol>
+      <source>
+        <network>lan_trusted</network>
+      </source>
+      <destination>
+        <network>lan_iot</network>
+      </destination>
+      <descr>Allow Trusted to IoT VLAN</descr>
+    </rule>
+    
+    <rule>
+      <id></id>
+      <tracker>1000000202</tracker>
+      <type>pass</type>
+      <interface>lan_trusted</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>any</protocol>
+      <source>
+        <network>lan_trusted</network>
+      </source>
+      <destination>
+        <network>lan_security</network>
+      </destination>
+      <descr>Allow Trusted to Security VLAN</descr>
+    </rule>
+    
+    <rule>
+      <id></id>
+      <tracker>1000000203</tracker>
+      <type>pass</type>
+      <interface>lan_trusted</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>any</protocol>
+      <source>
+        <network>lan_trusted</network>
+      </source>
+      <destination>
+        <not><network>lan_mgmt</network></not>
+      </destination>
+      <descr>Allow Trusted to Internet (not Management)</descr>
+    </rule>
+    
+    <rule>
+      <id></id>
+      <tracker>1000000204</tracker>
+      <type>block</type>
+      <interface>lan_trusted</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>any</protocol>
+      <source>
+        <network>lan_trusted</network>
+      </source>
+      <destination>
+        <network>lan_mgmt</network>
+      </destination>
+      <descr>Block Trusted to Management VLAN</descr>
+    </rule>
+
+    <!-- IoT Devices VLAN Rules -->
+    <rule>
+      <id></id>
+      <tracker>1000000301</tracker>
+      <type>pass</type>
+      <interface>lan_iot</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>tcp</protocol>
+      <source>
+        <network>lan_iot</network>
+      </source>
+      <destination>
+        <address>192.168.10.100</address>
+        <port>8123</port>
+      </destination>
+      <descr>Allow IoT to Home Assistant</descr>
+    </rule>
+    
+    <rule>
+      <id></id>
+      <tracker>1000000302</tracker>
+      <type>pass</type>
+      <interface>lan_iot</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>tcp</protocol>
+      <source>
+        <network>lan_iot</network>
+      </source>
+      <destination>
+        <any></any>
+        <port>80</port>
+      </destination>
+      <descr>Allow IoT HTTP for updates</descr>
+    </rule>
+    
+    <rule>
+      <id></id>
+      <tracker>1000000303</tracker>
+      <type>pass</type>
+      <interface>lan_iot</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>tcp</protocol>
+      <source>
+        <network>lan_iot</network>
+      </source>
+      <destination>
+        <any></any>
+        <port>443</port>
+      </destination>
+      <descr>Allow IoT HTTPS for updates</descr>
+    </rule>
+    
+    <rule>
+      <id></id>
+      <tracker>1000000304</tracker>
+      <type>block</type>
+      <interface>lan_iot</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>any</protocol>
+      <source>
+        <network>lan_iot</network>
+      </source>
+      <destination>
+        <network>(self)</network>
+      </destination>
+      <descr>Block IoT to other VLANs</descr>
+    </rule>
+
+    <!-- Security Devices VLAN Rules -->
+    <rule>
+      <id></id>
+      <tracker>1000000401</tracker>
+      <type>pass</type>
+      <interface>lan_security</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>tcp</protocol>
+      <source>
+        <network>lan_security</network>
+      </source>
+      <destination>
+        <address>192.168.10.100</address>
+        <port>8123</port>
+      </destination>
+      <descr>Allow Security to Home Assistant</descr>
+    </rule>
+    
+    <rule>
+      <id></id>
+      <tracker>1000000402</tracker>
+      <type>pass</type>
+      <interface>lan_security</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>tcp</protocol>
+      <source>
+        <network>lan_security</network>
+      </source>
+      <destination>
+        <network>lan_mgmt</network>
+        <port>3000</port>
+      </destination>
+      <descr>Allow Security to Grafana</descr>
+    </rule>
+    
+    <rule>
+      <id></id>
+      <tracker>1000000403</tracker>
+      <type>block</type>
+      <interface>lan_security</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>any</protocol>
+      <source>
+        <network>lan_security</network>
+      </source>
+      <destination>
+        <any></any>
+      </destination>
+      <descr>Block Security to Internet</descr>
+    </rule>
+
+    <!-- Guest Network VLAN Rules -->
+    <rule>
+      <id></id>
+      <tracker>1000000501</tracker>
+      <type>pass</type>
+      <interface>lan_guest</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>any</protocol>
+      <source>
+        <network>lan_guest</network>
+      </source>
+      <destination>
+        <not><network>(self)</network></not>
+      </destination>
+      <descr>Allow Guest to Internet only</descr>
+    </rule>
+    
+    <rule>
+      <id></id>
+      <tracker>1000000502</tracker>
+      <type>block</type>
+      <interface>lan_guest</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>any</protocol>
+      <source>
+        <network>lan_guest</network>
+      </source>
+      <destination>
+        <network>(self)</network>
+      </destination>
+      <descr>Block Guest to internal networks</descr>
+    </rule>
+
+    <!-- Quarantine VLAN Rules -->
+    <rule>
+      <id></id>
+      <tracker>1000000601</tracker>
+      <type>pass</type>
+      <interface>lan_mgmt</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>tcp</protocol>
+      <source>
+        <network>lan_mgmt</network>
+      </source>
+      <destination>
+        <network>lan_quarantine</network>
+        <port>22</port>
+      </destination>
+      <descr>Allow Management SSH to Quarantine</descr>
+    </rule>
+    
+    <rule>
+      <id></id>
+      <tracker>1000000602</tracker>
+      <type>block</type>
+      <interface>lan_quarantine</interface>
+      <ipprotocol>inet</ipprotocol>
+      <tag></tag>
+      <tagged></tagged>
+      <max></max>
+      <max-src-nodes></max-src-nodes>
+      <max-src-conn></max-src-conn>
+      <max-src-states></max-src-states>
+      <statetimeout></statetimeout>
+      <statetype>keep state</statetype>
+      <os></os>
+      <protocol>any</protocol>
+      <source>
+        <network>lan_quarantine</network>
+      </source>
+      <destination>
+        <any></any>
+      </destination>
+      <descr>Block all Quarantine traffic</descr>
+    </rule>
+  </filter>
+
+  <!-- DHCP Server Configuration -->
+  <dhcpd>
+    <lan_mgmt>
+      <enable></enable>
+      <range>
+        <from>192.168.10.100</from>
+        <to>192.168.10.200</to>
+      </range>
+      <failover_peerip></failover_peerip>
+      <defaultleasetime></defaultleasetime>
+      <maxleasetime></maxleasetime>
+      <netmask></netmask>
+      <gateway>192.168.10.1</gateway>
+      <domain>home.local</domain>
+      <domainsearchlist></domainsearchlist>
+      <ddnsdomain></ddnsdomain>
+      <ddnsdomainprimary></ddnsdomainprimary>
+      <ddnsdomainkeyname></ddnsdomainkeyname>
+      <ddnsdomainkey></ddnsdomainkey>
+      <mac_allow></mac_allow>
+      <mac_deny></mac_deny>
+      <ddnsclientupdates>allow</ddnsclientupdates>
+      <ddnsupdate></ddnsupdate>
+      <ddnsforcehostname></ddnsforcehostname>
+      <dnsserver>192.168.10.1</dnsserver>
+      <ntpserver>192.168.10.1</ntpserver>
+    </lan_mgmt>
+    
+    <lan_trusted>
+      <enable></enable>
+      <range>
+        <from>192.168.20.100</from>
+        <to>192.168.20.200</to>
+      </range>
+      <gateway>192.168.20.1</gateway>
+      <domain>home.local</domain>
+      <dnsserver>192.168.20.1</dnsserver>
+      <ntpserver>192.168.20.1</ntpserver>
+    </lan_trusted>
+    
+    <lan_iot>
+      <enable></enable>
+      <range>
+        <from>192.168.30.100</from>
+        <to>192.168.30.200</to>
+      </range>
+      <gateway>192.168.30.1</gateway>
+      <domain>iot.local</domain>
+      <dnsserver>192.168.30.1</dnsserver>
+      <ntpserver>192.168.30.1</ntpserver>
+    </lan_iot>
+    
+    <lan_security>
+      <enable></enable>
+      <range>
+        <from>192.168.40.100</from>
+        <to>192.168.40.200</to>
+      </range>
+      <gateway>192.168.40.1</gateway>
+      <domain>security.local</domain>
+      <dnsserver>192.168.40.1</dnsserver>
+      <ntpserver>192.168.40.1</ntpserver>
+    </lan_security>
+    
+    <lan_guest>
+      <enable></enable>
+      <range>
+        <from>192.168.50.100</from>
+        <to>192.168.50.200</to>
+      </range>
+      <gateway>192.168.50.1</gateway>
+      <domain>guest.local</domain>
+      <dnsserver>8.8.8.8,8.8.4.4</dnsserver>
+      <ntpserver>pool.ntp.org</ntpserver>
+    </lan_guest>
+    
+    <lan_quarantine>
+      <enable></enable>
+      <range>
+        <from>192.168.60.100</from>
+        <to>192.168.60.200</to>
+      </range>
+      <gateway>192.168.60.1</gateway>
+      <domain>quarantine.local</domain>
+      <dnsserver>192.168.60.1</dnsserver>
+    </lan_quarantine>
+  </dhcpd>
+
+  <!-- Static DHCP Mappings for Known Devices -->
+  <staticmaps>
+    <!-- Home Assistant Server -->
+    <map>
+      <mac>aa:bb:cc:dd:ee:01</mac>
+      <ipaddr>192.168.10.100</ipaddr>
+      <hostname>homeassistant</hostname>
+      <descr>Home Assistant Server</descr>
+    </map>
+    
+    <!-- IoT Device Examples -->
+    <map>
+      <mac>00:17:88:01:02:03</mac>
+      <ipaddr>192.168.30.10</ipaddr>
+      <hostname>hue-bridge</hostname>
+      <descr>Philips Hue Bridge</descr>
+    </map>
+    
+    <map>
+      <mac>b8:27:eb:01:02:03</mac>
+      <ipaddr>192.168.30.11</ipaddr>
+      <hostname>thermostat</hostname>
+      <descr>Smart Thermostat</descr>
+    </map>
+    
+    <!-- Security Device Examples -->
+    <map>
+      <mac>00:12:34:56:78:90</mac>
+      <ipaddr>192.168.40.10</ipaddr>
+      <hostname>camera-01</hostname>
+      <descr>Security Camera 1</descr>
+    </map>
+  </staticmaps>
+
+  <!-- DNS Resolver Configuration -->
+  <unbound>
+    <enable>on</enable>
+    <port>53</port>
+    <sslport>853</sslport>
+    <sslcertref></sslcertref>
+    <active_interface>all</active_interface>
+    <outgoing_interface>all</outgoing_interface>
+    <system_domain_local_zone_type>transparent</system_domain_local_zone_type>
+    <dnssec>on</dnssec>
+    <forwarding>on</forwarding>
+    <regdhcp>on</regdhcp>
+    <regdhcpstatic>on</regdhcpstatic>
+    <regovpnclients>on</regovpnclients>
+    <enable_wpad>on</enable_wpad>
+    <custom_options>
+      # Block known malicious domains
+      local-zone: "malware.example.com" refuse
+      local-zone: "phishing.example.com" refuse
+      
+      # Local domain resolution
+      local-zone: "home.local" static
+      local-zone: "iot.local" static
+      local-zone: "security.local" static
+    </custom_options>
+  </unbound>
+
+  <!-- Logging Configuration -->
+  <syslog>
+    <reverse></reverse>
+    <nentries>50000</nentries>
+    <remoteserver></remoteserver>
+    <remoteserver2></remoteserver2>
+    <remoteserver3></remoteserver3>
+    <sourceip></sourceip>
+    <ipproto>ipv4</ipproto>
+    <filter>on</filter>
+    <dhcp>on</dhcp>
+    <portalauth>on</portalauth>
+    <hostapd>on</hostapd>
+    <logall>on</logall>
+    <system>on</system>
+    <resolver>on</resolver>
+    <ppp>on</ppp>
+    <routing>on</routing>
+    <ntpd>on</ntpd>
+    <enable>on</enable>
+  </syslog>
+
+</pfsense>
+
+<!-- 
+Configuration Notes:
+1. Replace MAC addresses with your actual device MAC addresses
+2. Adjust IP ranges based on your network requirements
+3. Modify firewall rules according to your security policies
+4. Test all rules thoroughly before deploying to production
+5. Regular backup of this configuration is recommended
+6. Monitor logs for any unauthorized access attempts
+7. Update firmware regularly for security patches
+
+Security Recommendations:
+- Enable logging for all firewall rules
+- Implement intrusion detection/prevention
+- Regular security audits of firewall rules
+- Monitor for unusual traffic patterns
+- Keep pfSense updated to latest version
+- Use strong passwords for admin access
+- Enable two-factor authentication if available
+-->

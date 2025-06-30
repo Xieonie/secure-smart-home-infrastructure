@@ -1,0 +1,513 @@
+# Home Assistant Automations for Secure Smart Home Infrastructure
+# These automations enhance security and provide intelligent responses to various events
+
+# ============================================================================
+# Security Automations
+# ============================================================================
+
+# Detect unauthorized device connections
+- id: 'unauthorized_device_detection'
+  alias: 'Security: Unauthorized Device Detection'
+  description: 'Detect when unknown devices connect to the network'
+  trigger:
+    - platform: event
+      event_type: device_tracker_new_device
+  condition:
+    - condition: template
+      value_template: "{{ trigger.event.data.entity_id not in state_attr('group.known_devices', 'entity_id') }}"
+  action:
+    - service: notify.security_team
+      data:
+        title: "🚨 Unauthorized Device Detected"
+        message: >
+          Unknown device detected on network:
+          MAC: {{ trigger.event.data.mac }}
+          IP: {{ trigger.event.data.source_ip }}
+          Time: {{ now().strftime('%Y-%m-%d %H:%M:%S') }}
+    - service: script.quarantine_device
+      data:
+        device_mac: "{{ trigger.event.data.mac }}"
+        device_ip: "{{ trigger.event.data.source_ip }}"
+
+# Failed login attempt monitoring
+- id: 'failed_login_monitoring'
+  alias: 'Security: Failed Login Monitoring'
+  description: 'Monitor and respond to failed login attempts'
+  trigger:
+    - platform: state
+      entity_id: sensor.failed_login_attempts
+      above: 5
+  action:
+    - service: notify.security_team
+      data:
+        title: "🔒 Multiple Failed Login Attempts"
+        message: >
+          {{ states('sensor.failed_login_attempts') }} failed login attempts detected.
+          Last attempt from: {{ state_attr('sensor.failed_login_attempts', 'last_ip') }}
+    - service: script.enable_lockdown_mode
+      data:
+        level: "suspicious"
+        reason: "Multiple failed login attempts"
+
+# Motion detection during away mode
+- id: 'away_motion_detection'
+  alias: 'Security: Motion Detection While Away'
+  description: 'Alert when motion is detected while nobody is home'
+  trigger:
+    - platform: state
+      entity_id: 
+        - binary_sensor.living_room_motion
+        - binary_sensor.kitchen_motion
+        - binary_sensor.bedroom_motion
+      to: 'on'
+  condition:
+    - condition: state
+      entity_id: alarm_control_panel.home_security
+      state: 'armed_away'
+    - condition: state
+      entity_id: group.family
+      state: 'not_home'
+  action:
+    - service: notify.security_team
+      data:
+        title: "🚨 Motion Detected While Away"
+        message: >
+          Motion detected in {{ trigger.to_state.attributes.friendly_name }}
+          at {{ now().strftime('%H:%M:%S') }}
+    - service: camera.snapshot
+      target:
+        entity_id: camera.security_cameras
+      data:
+        filename: "/config/snapshots/motion_{{ now().strftime('%Y%m%d_%H%M%S') }}.jpg"
+    - service: script.emergency_recording
+    - service: light.turn_on
+      target:
+        entity_id: light.security_lights
+      data:
+        brightness: 255
+
+# Door/window sensor alerts
+- id: 'door_window_security'
+  alias: 'Security: Door/Window Breach'
+  description: 'Alert when doors or windows are opened unexpectedly'
+  trigger:
+    - platform: state
+      entity_id:
+        - binary_sensor.front_door
+        - binary_sensor.back_door
+        - binary_sensor.living_room_window
+        - binary_sensor.bedroom_window
+      to: 'on'
+  condition:
+    - condition: or
+      conditions:
+        - condition: state
+          entity_id: alarm_control_panel.home_security
+          state: 'armed_away'
+        - condition: and
+          conditions:
+            - condition: state
+              entity_id: alarm_control_panel.home_security
+              state: 'armed_night'
+            - condition: time
+              after: '22:00:00'
+              before: '06:00:00'
+  action:
+    - service: notify.security_team
+      data:
+        title: "🚪 Security Breach"
+        message: >
+          {{ trigger.to_state.attributes.friendly_name }} opened
+          at {{ now().strftime('%H:%M:%S') }}
+          Security mode: {{ states('alarm_control_panel.home_security') }}
+    - service: alarm_control_panel.alarm_trigger
+      target:
+        entity_id: alarm_control_panel.home_security
+
+# ============================================================================
+# Network Security Automations
+# ============================================================================
+
+# IoT device anomaly detection
+- id: 'iot_anomaly_detection'
+  alias: 'Network: IoT Device Anomaly Detection'
+  description: 'Detect unusual behavior from IoT devices'
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.iot_device_network_traffic
+      above: 1000  # MB per hour
+  action:
+    - service: notify.security_team
+      data:
+        title: "📡 IoT Device Anomaly"
+        message: >
+          Unusual network traffic detected from IoT devices:
+          {{ states('sensor.iot_device_network_traffic') }} MB in the last hour
+    - service: script.investigate_iot_traffic
+
+# VPN connection monitoring
+- id: 'vpn_connection_monitoring'
+  alias: 'Network: VPN Connection Monitoring'
+  description: 'Monitor VPN connection status'
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.vpn_connection
+      to: 'off'
+      for:
+        minutes: 5
+  action:
+    - service: notify.admin
+      data:
+        title: "🔒 VPN Connection Lost"
+        message: "VPN connection has been down for 5 minutes"
+    - service: script.restart_vpn_service
+
+# Firewall rule violations
+- id: 'firewall_violations'
+  alias: 'Network: Firewall Rule Violations'
+  description: 'Alert on firewall rule violations'
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.firewall_blocked_attempts
+      above: 50
+  action:
+    - service: notify.security_team
+      data:
+        title: "🛡️ High Firewall Activity"
+        message: >
+          {{ states('sensor.firewall_blocked_attempts') }} blocked attempts in the last hour
+          Top source: {{ state_attr('sensor.firewall_blocked_attempts', 'top_source') }}
+
+# ============================================================================
+# Device Management Automations
+# ============================================================================
+
+# New device onboarding
+- id: 'new_device_onboarding'
+  alias: 'Device: New Device Onboarding'
+  description: 'Automatically configure new IoT devices'
+  trigger:
+    - platform: event
+      event_type: zigbee2mqtt_device_joined
+  action:
+    - service: notify.admin
+      data:
+        title: "📱 New Device Joined"
+        message: >
+          New Zigbee device joined:
+          IEEE: {{ trigger.event.data.ieee_address }}
+          Type: {{ trigger.event.data.type }}
+    - service: script.configure_new_device
+      data:
+        ieee_address: "{{ trigger.event.data.ieee_address }}"
+        device_type: "{{ trigger.event.data.type }}"
+
+# Device offline detection
+- id: 'device_offline_detection'
+  alias: 'Device: Offline Detection'
+  description: 'Detect when critical devices go offline'
+  trigger:
+    - platform: state
+      entity_id:
+        - binary_sensor.security_camera_1
+        - binary_sensor.security_camera_2
+        - binary_sensor.smart_lock
+        - binary_sensor.smoke_detector
+      to: 'unavailable'
+      for:
+        minutes: 10
+  action:
+    - service: notify.security_team
+      data:
+        title: "⚠️ Critical Device Offline"
+        message: >
+          {{ trigger.to_state.attributes.friendly_name }} has been offline for 10 minutes
+    - service: script.device_health_check
+      data:
+        device_entity: "{{ trigger.entity_id }}"
+
+# Battery level monitoring
+- id: 'battery_level_monitoring'
+  alias: 'Device: Battery Level Monitoring'
+  description: 'Monitor battery levels of wireless devices'
+  trigger:
+    - platform: numeric_state
+      entity_id:
+        - sensor.door_sensor_battery
+        - sensor.motion_sensor_battery
+        - sensor.window_sensor_battery
+      below: 20
+  action:
+    - service: notify.admin
+      data:
+        title: "🔋 Low Battery Alert"
+        message: >
+          {{ trigger.to_state.attributes.friendly_name }} battery is at 
+          {{ trigger.to_state.state }}%
+
+# ============================================================================
+# Environmental Monitoring
+# ============================================================================
+
+# Temperature anomaly detection
+- id: 'temperature_anomaly'
+  alias: 'Environment: Temperature Anomaly'
+  description: 'Detect unusual temperature readings'
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.living_room_temperature
+      above: 30  # Celsius
+    - platform: numeric_state
+      entity_id: sensor.living_room_temperature
+      below: 10  # Celsius
+  action:
+    - service: notify.admin
+      data:
+        title: "🌡️ Temperature Anomaly"
+        message: >
+          Unusual temperature detected: {{ trigger.to_state.state }}°C
+          in {{ trigger.to_state.attributes.friendly_name }}
+    - service: script.investigate_temperature_anomaly
+
+# Humidity monitoring
+- id: 'humidity_monitoring'
+  alias: 'Environment: Humidity Monitoring'
+  description: 'Monitor humidity levels'
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.basement_humidity
+      above: 70
+      for:
+        hours: 2
+  action:
+    - service: notify.admin
+      data:
+        title: "💧 High Humidity Alert"
+        message: >
+          High humidity detected in basement: {{ trigger.to_state.state }}%
+          Consider running dehumidifier
+    - service: switch.turn_on
+      target:
+        entity_id: switch.basement_dehumidifier
+
+# Air quality monitoring
+- id: 'air_quality_monitoring'
+  alias: 'Environment: Air Quality Monitoring'
+  description: 'Monitor indoor air quality'
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.air_quality_pm25
+      above: 35  # Unhealthy for sensitive groups
+  action:
+    - service: notify.family
+      data:
+        title: "🌬️ Poor Air Quality"
+        message: >
+          Air quality is poor (PM2.5: {{ trigger.to_state.state }} μg/m³)
+          Consider closing windows and running air purifier
+    - service: switch.turn_on
+      target:
+        entity_id: switch.air_purifier
+
+# ============================================================================
+# Energy Management
+# ============================================================================
+
+# High energy usage alert
+- id: 'high_energy_usage'
+  alias: 'Energy: High Usage Alert'
+  description: 'Alert when energy usage is unusually high'
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.home_energy_usage
+      above: 5000  # Watts
+      for:
+        minutes: 30
+  action:
+    - service: notify.admin
+      data:
+        title: "⚡ High Energy Usage"
+        message: >
+          Energy usage has been above 5kW for 30 minutes
+          Current usage: {{ states('sensor.home_energy_usage') }}W
+    - service: script.energy_usage_analysis
+
+# Smart charging management
+- id: 'smart_charging_management'
+  alias: 'Energy: Smart Charging Management'
+  description: 'Manage device charging based on energy rates'
+  trigger:
+    - platform: time
+      at: '02:00:00'  # Off-peak hours
+  condition:
+    - condition: numeric_state
+      entity_id: sensor.energy_rate
+      below: 0.10  # Low rate threshold
+  action:
+    - service: switch.turn_on
+      target:
+        entity_id:
+          - switch.ev_charger
+          - switch.battery_bank_charger
+    - service: notify.admin
+      data:
+        title: "🔌 Smart Charging Started"
+        message: "Started charging during off-peak hours"
+
+# ============================================================================
+# Automation Management
+# ============================================================================
+
+# Automation health check
+- id: 'automation_health_check'
+  alias: 'System: Automation Health Check'
+  description: 'Monitor automation performance'
+  trigger:
+    - platform: time
+      at: '06:00:00'  # Daily check
+  action:
+    - service: script.automation_health_check
+    - service: notify.admin
+      data:
+        title: "🔧 Daily System Check"
+        message: >
+          Automation health check completed
+          Active automations: {{ states('sensor.active_automations') }}
+          Failed automations: {{ states('sensor.failed_automations') }}
+
+# Backup automation
+- id: 'backup_automation'
+  alias: 'System: Backup Automation'
+  description: 'Automated system backup'
+  trigger:
+    - platform: time
+      at: '03:00:00'  # Daily backup
+  action:
+    - service: script.create_backup
+    - service: notify.admin
+      data:
+        title: "💾 Backup Completed"
+        message: "Daily backup completed successfully"
+
+# ============================================================================
+# Seasonal and Time-Based Automations
+# ============================================================================
+
+# Vacation mode
+- id: 'vacation_mode'
+  alias: 'Presence: Vacation Mode'
+  description: 'Activate vacation mode when away for extended periods'
+  trigger:
+    - platform: state
+      entity_id: group.family
+      to: 'not_home'
+      for:
+        hours: 24
+  action:
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.vacation_mode
+    - service: script.activate_vacation_security
+    - service: notify.admin
+      data:
+        title: "✈️ Vacation Mode Activated"
+        message: "Extended absence detected, vacation mode activated"
+
+# Welcome home automation
+- id: 'welcome_home'
+  alias: 'Presence: Welcome Home'
+  description: 'Welcome home routine'
+  trigger:
+    - platform: state
+      entity_id: group.family
+      from: 'not_home'
+      to: 'home'
+  condition:
+    - condition: state
+      entity_id: input_boolean.vacation_mode
+      state: 'on'
+  action:
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.vacation_mode
+    - service: script.deactivate_vacation_security
+    - service: light.turn_on
+      target:
+        entity_id: light.entrance_lights
+    - service: notify.family
+      data:
+        title: "🏠 Welcome Home"
+        message: "Welcome back! Vacation mode deactivated"
+
+# ============================================================================
+# Emergency Procedures
+# ============================================================================
+
+# Fire emergency
+- id: 'fire_emergency'
+  alias: 'Emergency: Fire Detection'
+  description: 'Emergency response to fire detection'
+  trigger:
+    - platform: state
+      entity_id:
+        - binary_sensor.smoke_detector_kitchen
+        - binary_sensor.smoke_detector_living_room
+        - binary_sensor.smoke_detector_bedroom
+      to: 'on'
+  action:
+    - service: script.fire_emergency_response
+    - service: notify.emergency
+      data:
+        title: "🔥 FIRE EMERGENCY"
+        message: >
+          Fire detected: {{ trigger.to_state.attributes.friendly_name }}
+          Emergency services contacted
+    - service: light.turn_on
+      target:
+        entity_id: light.all_lights
+      data:
+        brightness: 255
+    - service: switch.turn_off
+      target:
+        entity_id: switch.hvac_system
+
+# Medical emergency
+- id: 'medical_emergency'
+  alias: 'Emergency: Medical Alert'
+  description: 'Medical emergency response'
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.panic_button
+      to: 'on'
+  action:
+    - service: script.medical_emergency_response
+    - service: notify.emergency
+      data:
+        title: "🚑 MEDICAL EMERGENCY"
+        message: "Medical emergency button activated"
+    - service: light.turn_on
+      target:
+        entity_id: light.all_lights
+      data:
+        color_name: red
+        brightness: 255
+
+# Security breach response
+- id: 'security_breach_response'
+  alias: 'Emergency: Security Breach Response'
+  description: 'Automated response to security breaches'
+  trigger:
+    - platform: state
+      entity_id: alarm_control_panel.home_security
+      to: 'triggered'
+  action:
+    - service: script.security_breach_response
+    - service: camera.record
+      target:
+        entity_id: camera.all_cameras
+      data:
+        duration: 300  # 5 minutes
+    - service: notify.security_team
+      data:
+        title: "🚨 SECURITY BREACH"
+        message: "Security system triggered - recording activated"

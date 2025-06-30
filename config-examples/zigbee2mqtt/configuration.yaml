@@ -1,0 +1,280 @@
+# Zigbee2MQTT Configuration for Secure Smart Home
+# This configuration focuses on security and proper device management
+
+# Home Assistant integration
+homeassistant: true
+
+# MQTT settings
+mqtt:
+  # MQTT broker URL
+  server: mqtt://mosquitto:1883
+  
+  # Authentication (recommended)
+  user: zigbee2mqtt
+  password: !secret mqtt_password
+  
+  # Base topic for MQTT messages
+  base_topic: zigbee2mqtt
+  
+  # Include device information in published messages
+  include_device_information: true
+  
+  # Keep alive interval
+  keepalive: 60
+  
+  # Client ID
+  client_id: zigbee2mqtt
+  
+  # Reject unauthorized messages
+  reject_unauthorized: true
+
+# Serial port configuration
+serial:
+  # Path to the Zigbee coordinator
+  port: /dev/ttyUSB0
+  
+  # Disable LED on coordinator (security)
+  disable_led: true
+  
+  # Adapter type (CC2531, CC2652, etc.)
+  adapter: zstack
+  
+  # Baudrate
+  baudrate: 115200
+
+# Network settings
+network:
+  # Network key (16 bytes, keep this secret!)
+  network_key: !secret zigbee_network_key
+  
+  # PAN ID (Personal Area Network ID)
+  pan_id: 0x1a62
+  
+  # Extended PAN ID
+  extended_pan_id: [0xDD, 0xDD, 0xDD, 0xDD, 0xDD, 0xDD, 0xDD, 0xDD]
+  
+  # Channel (11-26, avoid WiFi channels)
+  channel: 20
+
+# Device settings
+device_options:
+  # Retain MQTT messages
+  retain: true
+  
+  # Legacy API (disable for security)
+  legacy: false
+  
+  # Optimistic updates
+  optimistic: true
+  
+  # Transition time for light changes
+  transition: 2
+
+# Security settings
+security:
+  # Disable joining by default
+  permit_join: false
+  
+  # Install code for secure joining
+  install_code_key: !secret install_code_key
+
+# Advanced settings
+advanced:
+  # Log level (error, warn, info, debug)
+  log_level: info
+  
+  # Log directory
+  log_directory: /app/data/log/%TIMESTAMP%
+  
+  # Log file rotation
+  log_rotation: true
+  
+  # Maximum log files
+  log_max_files: 10
+  
+  # Network scan channels
+  channel_scan: true
+  
+  # Cache state in file
+  cache_state: true
+  
+  # Cache state send on startup
+  cache_state_send_on_startup: true
+  
+  # Last seen attribute
+  last_seen: ISO_8601
+  
+  # Elapsed attribute
+  elapsed: true
+  
+  # Network map
+  network_map_extension: true
+  
+  # Availability timeout
+  availability_timeout: 0
+  
+  # Availability blacklist
+  availability_blacklist: []
+  
+  # Availability whitelist
+  availability_whitelist: []
+  
+  # Availability passive list
+  availability_passivelist: []
+  
+  # Report feature
+  report: true
+  
+  # Homeassistant discovery topic
+  homeassistant_discovery_topic: homeassistant
+  
+  # Homeassistant status topic
+  homeassistant_status_topic: homeassistant/status
+  
+  # Timestamp format
+  timestamp_format: YYYY-MM-DD HH:mm:ss
+  
+  # Adapter delay
+  adapter_delay: 0
+  
+  # Adapter concurrent
+  adapter_concurrent: null
+  
+  # Soft reset timeout
+  soft_reset_timeout: 0
+  
+  # Network key distribute
+  network_key_distribute: false
+  
+  # Ikea OTA use test URL
+  ikea_ota_use_test_url: false
+  
+  # Legacy entity attributes
+  legacy_entity_attributes: false
+  
+  # Legacy triggers
+  legacy_triggers: false
+
+# Frontend settings (web interface)
+frontend:
+  # Enable web frontend
+  port: 8080
+  
+  # Host to bind to
+  host: 0.0.0.0
+  
+  # Authentication
+  auth_token: !secret frontend_auth_token
+  
+  # URL
+  url: http://localhost:8080
+
+# Experimental features
+experimental:
+  # New API
+  new_api: true
+  
+  # Output
+  output: attribute_and_json
+
+# Device-specific configurations
+device_specific:
+  # Example: Philips Hue bulbs
+  '0x00178801234567890':
+    friendly_name: living_room_light
+    retain: true
+    transition: 2
+    color_sync: true
+    
+  # Example: Temperature sensor
+  '0x00158d0001234567':
+    friendly_name: bedroom_temperature
+    retain: true
+    # Debounce to prevent spam
+    debounce: 1
+    
+  # Example: Motion sensor
+  '0x00158d0001234568':
+    friendly_name: hallway_motion
+    retain: true
+    # Occupancy timeout
+    occupancy_timeout: 90
+
+# Groups configuration
+groups:
+  # Example: All lights group
+  '1':
+    friendly_name: all_lights
+    retain: true
+    devices:
+      - '0x00178801234567890'
+      - '0x00178801234567891'
+
+# Bind configuration for local control
+bind:
+  # Example: Bind switch to light for local control
+  - source: '0x00158d0001234569'  # Switch
+    target: '0x00178801234567890'  # Light
+    clusters:
+      - genOnOff
+      - genLevelCtrl
+
+# OTA (Over-The-Air) updates
+ota:
+  # Disable automatic updates for security
+  disable_automatic_update_check: true
+  
+  # Update check interval (hours)
+  update_check_interval: 24
+  
+  # IKEA OTA server
+  ikea_ota_use_test_url: false
+
+# External converters (custom device support)
+external_converters:
+  - custom_devices.js
+
+# Map options
+map_options:
+  graphviz:
+    # Colors for different device types
+    colors:
+      fill:
+        enddevice: '#fff8ce'
+        coordinator: '#e04e5d'
+        router: '#4ea3e0'
+      font:
+        coordinator: '#ffffff'
+        router: '#ffffff'
+        enddevice: '#000000'
+      line:
+        active: '#009900'
+        inactive: '#994444'
+
+# Blocklist for problematic devices
+blocklist:
+  # Example: Block specific devices
+  # - '0x00158d000123456a'
+
+# Passlist (only allow specific devices)
+passlist:
+  # Example: Only allow specific devices
+  # - '0x00158d000123456b'
+
+# Availability settings
+availability:
+  # Active timeout
+  active:
+    timeout: 10
+  
+  # Passive timeout  
+  passive:
+    timeout: 1500
+
+# MQTT topics structure
+topic:
+  # Base topic
+  base: zigbee2mqtt
+  
+  # Prefix for device topics
+  prefix: zigbee2mqtt

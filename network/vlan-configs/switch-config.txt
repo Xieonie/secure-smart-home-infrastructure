@@ -1,0 +1,406 @@
+# Cisco/HP Switch Configuration for Secure Smart Home Infrastructure
+# This configuration implements VLAN segmentation for IoT security
+
+# ============================================================================
+# Global Configuration
+# ============================================================================
+
+# Set hostname
+hostname SmartHome-Switch
+
+# Enable VTP (VLAN Trunking Protocol) - use transparent mode for security
+vtp mode transparent
+vtp domain SMARTHOME
+
+# Configure spanning tree
+spanning-tree mode rapid-pvst
+spanning-tree portfast default
+spanning-tree portfast bpduguard default
+
+# ============================================================================
+# VLAN Configuration
+# ============================================================================
+
+# Create VLANs
+vlan 10
+ name Management
+ exit
+
+vlan 20
+ name Trusted-Devices
+ exit
+
+vlan 30
+ name IoT-Devices
+ exit
+
+vlan 40
+ name Security-Devices
+ exit
+
+vlan 50
+ name Guest-Network
+ exit
+
+vlan 60
+ name Quarantine
+ exit
+
+# ============================================================================
+# Trunk Port Configuration (Uplink to Router/Firewall)
+# ============================================================================
+
+interface GigabitEthernet0/1
+ description Trunk to pfSense Router
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30,40,50,60
+ switchport trunk native vlan 10
+ spanning-tree portfast trunk
+ no shutdown
+ exit
+
+# ============================================================================
+# Management VLAN Interface
+# ============================================================================
+
+interface vlan 10
+ description Management Interface
+ ip address 192.168.10.2 255.255.255.0
+ no shutdown
+ exit
+
+# Default gateway
+ip default-gateway 192.168.10.1
+
+# ============================================================================
+# Access Port Configuration - IoT Devices (VLAN 30)
+# ============================================================================
+
+# Ports 2-12 for IoT devices
+interface range GigabitEthernet0/2-12
+ description IoT Devices
+ switchport mode access
+ switchport access vlan 30
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ no shutdown
+ exit
+
+# ============================================================================
+# Access Port Configuration - Security Devices (VLAN 40)
+# ============================================================================
+
+# Ports 13-18 for security devices (cameras, sensors)
+interface range GigabitEthernet0/13-18
+ description Security Devices
+ switchport mode access
+ switchport access vlan 40
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security violation shutdown
+ switchport port-security mac-address sticky
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ no shutdown
+ exit
+
+# ============================================================================
+# Access Port Configuration - Trusted Devices (VLAN 20)
+# ============================================================================
+
+# Ports 19-22 for trusted devices
+interface range GigabitEthernet0/19-22
+ description Trusted Devices
+ switchport mode access
+ switchport access vlan 20
+ spanning-tree portfast
+ no shutdown
+ exit
+
+# ============================================================================
+# Access Port Configuration - Guest Network (VLAN 50)
+# ============================================================================
+
+# Port 23 for guest access point
+interface GigabitEthernet0/23
+ description Guest Access Point
+ switchport mode access
+ switchport access vlan 50
+ spanning-tree portfast
+ no shutdown
+ exit
+
+# ============================================================================
+# Access Port Configuration - Quarantine (VLAN 60)
+# ============================================================================
+
+# Port 24 for quarantine/unknown devices
+interface GigabitEthernet0/24
+ description Quarantine Port
+ switchport mode access
+ switchport access vlan 60
+ spanning-tree portfast
+ no shutdown
+ exit
+
+# ============================================================================
+# Security Configuration
+# ============================================================================
+
+# Enable DHCP snooping for security
+ip dhcp snooping
+ip dhcp snooping vlan 20,30,40,50,60
+ip dhcp snooping trust interface GigabitEthernet0/1
+no ip dhcp snooping information option
+
+# Enable Dynamic ARP Inspection
+ip arp inspection vlan 20,30,40,50,60
+ip arp inspection trust interface GigabitEthernet0/1
+
+# Enable IP Source Guard (requires DHCP snooping)
+interface range GigabitEthernet0/2-24
+ ip verify source
+ exit
+
+# ============================================================================
+# Access Control Lists (ACLs)
+# ============================================================================
+
+# Block inter-VLAN communication by default (handled by router/firewall)
+# These ACLs provide additional layer of security
+
+# ACL to block IoT devices from accessing other VLANs
+ip access-list extended BLOCK_IOT_INTER_VLAN
+ deny ip 192.168.30.0 0.0.0.255 192.168.10.0 0.0.0.255
+ deny ip 192.168.30.0 0.0.0.255 192.168.20.0 0.0.0.255
+ deny ip 192.168.30.0 0.0.0.255 192.168.40.0 0.0.0.255
+ deny ip 192.168.30.0 0.0.0.255 192.168.50.0 0.0.0.255
+ permit ip any any
+
+# ACL to block guest network from accessing internal VLANs
+ip access-list extended BLOCK_GUEST_INTERNAL
+ deny ip 192.168.50.0 0.0.0.255 192.168.10.0 0.0.0.255
+ deny ip 192.168.50.0 0.0.0.255 192.168.20.0 0.0.0.255
+ deny ip 192.168.50.0 0.0.0.255 192.168.30.0 0.0.0.255
+ deny ip 192.168.50.0 0.0.0.255 192.168.40.0 0.0.0.255
+ permit ip any any
+
+# ============================================================================
+# Quality of Service (QoS)
+# ============================================================================
+
+# Enable QoS for prioritizing security traffic
+mls qos
+
+# Classify security camera traffic as high priority
+class-map match-all SECURITY_CAMERAS
+ match access-group name SECURITY_CAMERA_TRAFFIC
+
+policy-map SECURITY_QOS
+ class SECURITY_CAMERAS
+  set dscp af31
+  police 50000000 conform-action transmit exceed-action drop
+
+# Apply QoS policy to security VLAN interface
+interface vlan 40
+ service-policy input SECURITY_QOS
+
+# ACL for security camera traffic
+ip access-list extended SECURITY_CAMERA_TRAFFIC
+ permit ip 192.168.40.0 0.0.0.255 any
+ permit ip any 192.168.40.0 0.0.0.255
+
+# ============================================================================
+# SNMP Configuration for Monitoring
+# ============================================================================
+
+# Configure SNMP for network monitoring
+snmp-server community public RO
+snmp-server community private RW
+snmp-server location "Smart Home Network Closet"
+snmp-server contact "admin@smarthome.local"
+
+# Enable SNMP traps
+snmp-server enable traps
+snmp-server host 192.168.10.100 version 2c public
+
+# ============================================================================
+# Logging Configuration
+# ============================================================================
+
+# Configure logging
+logging buffered 16384
+logging console warnings
+logging monitor warnings
+logging trap informational
+logging facility local0
+logging source-interface vlan 10
+
+# Log to syslog server
+logging host 192.168.10.100
+
+# ============================================================================
+# NTP Configuration
+# ============================================================================
+
+# Configure NTP for accurate timestamps
+ntp server 192.168.10.1
+ntp server pool.ntp.org
+
+# ============================================================================
+# SSH and Management Configuration
+# ============================================================================
+
+# Enable SSH for secure management
+ip domain-name smarthome.local
+crypto key generate rsa modulus 2048
+
+# Configure SSH
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+
+# Configure VTY lines for SSH access
+line vty 0 4
+ transport input ssh
+ login local
+ exec-timeout 10 0
+ logging synchronous
+
+# Create local admin user
+username admin privilege 15 secret your-secure-password
+
+# ============================================================================
+# Additional Security Features
+# ============================================================================
+
+# Disable unused services
+no ip http server
+no ip http secure-server
+no cdp run
+no lldp run
+
+# Configure banner
+banner motd ^
+WARNING: Unauthorized access to this device is prohibited.
+All activities are logged and monitored.
+^
+
+# ============================================================================
+# Port Security Violation Actions
+# ============================================================================
+
+# Configure what happens when port security is violated
+# Options: protect, restrict, shutdown
+
+# For IoT devices - restrict (drop packets but keep port up)
+interface range GigabitEthernet0/2-12
+ switchport port-security violation restrict
+
+# For security devices - shutdown (disable port completely)
+interface range GigabitEthernet0/13-18
+ switchport port-security violation shutdown
+
+# ============================================================================
+# VLAN Access Maps (Additional Security)
+# ============================================================================
+
+# Create VLAN access maps for additional filtering
+vlan access-map IOT_FILTER 10
+ match ip address BLOCK_IOT_INTER_VLAN
+ action drop
+
+vlan access-map IOT_FILTER 20
+ action forward
+
+vlan filter IOT_FILTER vlan-list 30
+
+# ============================================================================
+# Storm Control
+# ============================================================================
+
+# Configure storm control to prevent broadcast storms
+interface range GigabitEthernet0/2-24
+ storm-control broadcast level 10.00
+ storm-control multicast level 10.00
+ storm-control unicast level 10.00
+ storm-control action shutdown
+
+# ============================================================================
+# MAC Address Table Security
+# ============================================================================
+
+# Configure MAC address aging time
+mac address-table aging-time 300
+
+# Limit MAC address learning per port
+interface range GigabitEthernet0/2-24
+ switchport port-security maximum 2
+
+# ============================================================================
+# Save Configuration
+# ============================================================================
+
+# Save the configuration
+copy running-config startup-config
+
+# ============================================================================
+# Verification Commands
+# ============================================================================
+
+# Use these commands to verify configuration:
+
+# show vlan brief
+# show interfaces trunk
+# show interfaces status
+# show port-security
+# show ip dhcp snooping
+# show ip arp inspection
+# show spanning-tree
+# show mac address-table
+# show logging
+# show ntp status
+
+# ============================================================================
+# Troubleshooting Commands
+# ============================================================================
+
+# show interfaces GigabitEthernet0/X
+# show vlan id X
+# show spanning-tree interface GigabitEthernet0/X
+# show port-security interface GigabitEthernet0/X
+# debug spanning-tree events
+# debug port-security
+
+# ============================================================================
+# Maintenance Commands
+# ============================================================================
+
+# Clear port security violations:
+# clear port-security sticky interface GigabitEthernet0/X
+
+# Reset interface:
+# shutdown
+# no shutdown
+
+# Clear MAC address table:
+# clear mac address-table dynamic
+
+# ============================================================================
+# Security Best Practices Implemented
+# ============================================================================
+
+# 1. VLAN segmentation for network isolation
+# 2. Port security to prevent MAC flooding
+# 3. DHCP snooping to prevent rogue DHCP servers
+# 4. Dynamic ARP Inspection to prevent ARP spoofing
+# 5. IP Source Guard to prevent IP spoofing
+# 6. Storm control to prevent broadcast storms
+# 7. Spanning Tree security features
+# 8. SSH-only management access
+# 9. SNMP monitoring
+# 10. Comprehensive logging
