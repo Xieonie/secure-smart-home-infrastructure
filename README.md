@@ -165,7 +165,7 @@ VLAN 60 - Quarantine (192.168.60.0/24)
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/secure-smart-home-infrastructure.git
+   git clone https://github.com/Xieonie/secure-smart-home-infrastructure.git
    cd secure-smart-home-infrastructure
    ```
 
