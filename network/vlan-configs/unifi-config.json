@@ -1,0 +1,630 @@
+{
+  "unifi_network_configuration": {
+    "version": "7.4.162",
+    "site_name": "smart_home",
+    "description": "Smart Home Network Configuration with VLAN Segmentation",
+    "networks": [
+      {
+        "name": "Management",
+        "purpose": "corporate",
+        "vlan_enabled": true,
+        "vlan": 10,
+        "subnet": "192.168.10.0/24",
+        "gateway_ip": "192.168.10.1",
+        "dhcp_enabled": true,
+        "dhcp_range_start": "192.168.10.100",
+        "dhcp_range_stop": "192.168.10.199",
+        "dhcp_lease_time": 86400,
+        "domain_name": "mgmt.smarthome.local",
+        "dns_servers": ["192.168.10.1", "1.1.1.1"],
+        "igmp_snooping": true,
+        "multicast_enhancement": false,
+        "upnp_lan_enabled": false,
+        "dhcp_dns_enabled": true,
+        "dhcp_ntp_enabled": true,
+        "ntp_servers": ["pool.ntp.org"],
+        "firewall_group": "LAN_IN",
+        "isolation": false,
+        "guest_access": false
+      },
+      {
+        "name": "Trusted_Devices",
+        "purpose": "corporate",
+        "vlan_enabled": true,
+        "vlan": 20,
+        "subnet": "192.168.20.0/24",
+        "gateway_ip": "192.168.20.1",
+        "dhcp_enabled": true,
+        "dhcp_range_start": "192.168.20.100",
+        "dhcp_range_stop": "192.168.20.199",
+        "dhcp_lease_time": 86400,
+        "domain_name": "trusted.smarthome.local",
+        "dns_servers": ["192.168.10.1", "1.1.1.1"],
+        "igmp_snooping": true,
+        "multicast_enhancement": true,
+        "upnp_lan_enabled": true,
+        "dhcp_dns_enabled": true,
+        "dhcp_ntp_enabled": true,
+        "ntp_servers": ["pool.ntp.org"],
+        "firewall_group": "TRUSTED_IN",
+        "isolation": false,
+        "guest_access": false
+      },
+      {
+        "name": "IoT_Devices",
+        "purpose": "corporate",
+        "vlan_enabled": true,
+        "vlan": 30,
+        "subnet": "192.168.30.0/24",
+        "gateway_ip": "192.168.30.1",
+        "dhcp_enabled": true,
+        "dhcp_range_start": "192.168.30.100",
+        "dhcp_range_stop": "192.168.30.199",
+        "dhcp_lease_time": 86400,
+        "domain_name": "iot.smarthome.local",
+        "dns_servers": ["192.168.10.1", "1.1.1.1"],
+        "igmp_snooping": true,
+        "multicast_enhancement": false,
+        "upnp_lan_enabled": false,
+        "dhcp_dns_enabled": true,
+        "dhcp_ntp_enabled": true,
+        "ntp_servers": ["pool.ntp.org"],
+        "firewall_group": "IOT_IN",
+        "isolation": true,
+        "guest_access": false,
+        "bandwidth_profile": "iot_limited"
+      },
+      {
+        "name": "Security_Devices",
+        "purpose": "corporate",
+        "vlan_enabled": true,
+        "vlan": 40,
+        "subnet": "192.168.40.0/24",
+        "gateway_ip": "192.168.40.1",
+        "dhcp_enabled": true,
+        "dhcp_range_start": "192.168.40.100",
+        "dhcp_range_stop": "192.168.40.199",
+        "dhcp_lease_time": 86400,
+        "domain_name": "security.smarthome.local",
+        "dns_servers": ["192.168.10.1", "1.1.1.1"],
+        "igmp_snooping": true,
+        "multicast_enhancement": false,
+        "upnp_lan_enabled": false,
+        "dhcp_dns_enabled": true,
+        "dhcp_ntp_enabled": true,
+        "ntp_servers": ["pool.ntp.org"],
+        "firewall_group": "SECURITY_IN",
+        "isolation": true,
+        "guest_access": false,
+        "bandwidth_profile": "security_priority"
+      },
+      {
+        "name": "Guest_Network",
+        "purpose": "guest",
+        "vlan_enabled": true,
+        "vlan": 50,
+        "subnet": "192.168.50.0/24",
+        "gateway_ip": "192.168.50.1",
+        "dhcp_enabled": true,
+        "dhcp_range_start": "192.168.50.100",
+        "dhcp_range_stop": "192.168.50.199",
+        "dhcp_lease_time": 3600,
+        "domain_name": "guest.smarthome.local",
+        "dns_servers": ["1.1.1.1", "8.8.8.8"],
+        "igmp_snooping": false,
+        "multicast_enhancement": false,
+        "upnp_lan_enabled": false,
+        "dhcp_dns_enabled": true,
+        "dhcp_ntp_enabled": false,
+        "firewall_group": "GUEST_IN",
+        "isolation": true,
+        "guest_access": true,
+        "bandwidth_profile": "guest_limited"
+      },
+      {
+        "name": "Quarantine",
+        "purpose": "corporate",
+        "vlan_enabled": true,
+        "vlan": 60,
+        "subnet": "192.168.60.0/24",
+        "gateway_ip": "192.168.60.1",
+        "dhcp_enabled": true,
+        "dhcp_range_start": "192.168.60.100",
+        "dhcp_range_stop": "192.168.60.199",
+        "dhcp_lease_time": 3600,
+        "domain_name": "quarantine.smarthome.local",
+        "dns_servers": ["192.168.10.1"],
+        "igmp_snooping": false,
+        "multicast_enhancement": false,
+        "upnp_lan_enabled": false,
+        "dhcp_dns_enabled": false,
+        "dhcp_ntp_enabled": false,
+        "firewall_group": "QUARANTINE_IN",
+        "isolation": true,
+        "guest_access": false,
+        "internet_access": false
+      }
+    ],
+    "firewall_groups": [
+      {
+        "name": "LAN_IN",
+        "type": "LAN_IN",
+        "rules": [
+          {
+            "name": "Allow Management to All",
+            "enabled": true,
+            "action": "accept",
+            "protocol": "all",
+            "src_networkconf_id": "management_network",
+            "dst_networkconf_id": "any",
+            "logging": true,
+            "state_established": true,
+            "state_new": true
+          }
+        ]
+      },
+      {
+        "name": "TRUSTED_IN",
+        "type": "LAN_IN",
+        "rules": [
+          {
+            "name": "Allow Trusted to Internet",
+            "enabled": true,
+            "action": "accept",
+            "protocol": "all",
+            "src_networkconf_id": "trusted_network",
+            "dst_networkconf_id": "wan",
+            "logging": false,
+            "state_established": true,
+            "state_new": true
+          },
+          {
+            "name": "Allow Trusted to IoT HTTP",
+            "enabled": true,
+            "action": "accept",
+            "protocol": "tcp",
+            "src_networkconf_id": "trusted_network",
+            "dst_networkconf_id": "iot_network",
+            "dst_port": "80,443,8080",
+            "logging": true,
+            "state_established": true,
+            "state_new": true
+          },
+          {
+            "name": "Allow Trusted to Security Cameras",
+            "enabled": true,
+            "action": "accept",
+            "protocol": "tcp",
+            "src_networkconf_id": "trusted_network",
+            "dst_networkconf_id": "security_network",
+            "dst_port": "80,443,554,8080",
+            "logging": true,
+            "state_established": true,
+            "state_new": true
+          }
+        ]
+      },
+      {
+        "name": "IOT_IN",
+        "type": "LAN_IN",
+        "rules": [
+          {
+            "name": "Block IoT to Management",
+            "enabled": true,
+            "action": "drop",
+            "protocol": "all",
+            "src_networkconf_id": "iot_network",
+            "dst_networkconf_id": "management_network",
+            "logging": true,
+            "state_established": false,
+            "state_new": false
+          },
+          {
+            "name": "Block IoT to Trusted",
+            "enabled": true,
+            "action": "drop",
+            "protocol": "all",
+            "src_networkconf_id": "iot_network",
+            "dst_networkconf_id": "trusted_network",
+            "logging": true,
+            "state_established": false,
+            "state_new": false
+          },
+          {
+            "name": "Block IoT to Security",
+            "enabled": true,
+            "action": "drop",
+            "protocol": "all",
+            "src_networkconf_id": "iot_network",
+            "dst_networkconf_id": "security_network",
+            "logging": true,
+            "state_established": false,
+            "state_new": false
+          },
+          {
+            "name": "Allow IoT to Home Assistant",
+            "enabled": true,
+            "action": "accept",
+            "protocol": "tcp",
+            "src_networkconf_id": "iot_network",
+            "dst_address": "192.168.10.50",
+            "dst_port": "8123",
+            "logging": true,
+            "state_established": true,
+            "state_new": true
+          },
+          {
+            "name": "Allow IoT Internet HTTP/HTTPS",
+            "enabled": true,
+            "action": "accept",
+            "protocol": "tcp",
+            "src_networkconf_id": "iot_network",
+            "dst_networkconf_id": "wan",
+            "dst_port": "80,443",
+            "logging": true,
+            "state_established": true,
+            "state_new": true
+          },
+          {
+            "name": "Allow IoT DNS",
+            "enabled": true,
+            "action": "accept",
+            "protocol": "udp",
+            "src_networkconf_id": "iot_network",
+            "dst_address": "192.168.10.1",
+            "dst_port": "53",
+            "logging": false,
+            "state_established": true,
+            "state_new": true
+          },
+          {
+            "name": "Allow IoT NTP",
+            "enabled": true,
+            "action": "accept",
+            "protocol": "udp",
+            "src_networkconf_id": "iot_network",
+            "dst_networkconf_id": "wan",
+            "dst_port": "123",
+            "logging": false,
+            "state_established": true,
+            "state_new": true
+          }
+        ]
+      },
+      {
+        "name": "SECURITY_IN",
+        "type": "LAN_IN",
+        "rules": [
+          {
+            "name": "Block Security to Management",
+            "enabled": true,
+            "action": "drop",
+            "protocol": "all",
+            "src_networkconf_id": "security_network",
+            "dst_networkconf_id": "management_network",
+            "logging": true,
+            "state_established": false,
+            "state_new": false
+          },
+          {
+            "name": "Block Security to Trusted",
+            "enabled": true,
+            "action": "drop",
+            "protocol": "all",
+            "src_networkconf_id": "security_network",
+            "dst_networkconf_id": "trusted_network",
+            "logging": true,
+            "state_established": false,
+            "state_new": false
+          },
+          {
+            "name": "Block Security to IoT",
+            "enabled": true,
+            "action": "drop",
+            "protocol": "all",
+            "src_networkconf_id": "security_network",
+            "dst_networkconf_id": "iot_network",
+            "logging": true,
+            "state_established": false,
+            "state_new": false
+          },
+          {
+            "name": "Allow Security to NVR",
+            "enabled": true,
+            "action": "accept",
+            "protocol": "tcp",
+            "src_networkconf_id": "security_network",
+            "dst_address": "192.168.10.60",
+            "dst_port": "80,443,554,8080",
+            "logging": true,
+            "state_established": true,
+            "state_new": true
+          },
+          {
+            "name": "Allow Security Limited Internet",
+            "enabled": true,
+            "action": "accept",
+            "protocol": "tcp",
+            "src_networkconf_id": "security_network",
+            "dst_networkconf_id": "wan",
+            "dst_port": "80,443",
+            "logging": true,
+            "state_established": true,
+            "state_new": true
+          }
+        ]
+      },
+      {
+        "name": "GUEST_IN",
+        "type": "LAN_IN",
+        "rules": [
+          {
+            "name": "Block Guest to All Internal",
+            "enabled": true,
+            "action": "drop",
+            "protocol": "all",
+            "src_networkconf_id": "guest_network",
+            "dst_networkconf_id": "!wan",
+            "logging": true,
+            "state_established": false,
+            "state_new": false
+          },
+          {
+            "name": "Allow Guest Internet",
+            "enabled": true,
+            "action": "accept",
+            "protocol": "all",
+            "src_networkconf_id": "guest_network",
+            "dst_networkconf_id": "wan",
+            "logging": false,
+            "state_established": true,
+            "state_new": true
+          }
+        ]
+      },
+      {
+        "name": "QUARANTINE_IN",
+        "type": "LAN_IN",
+        "rules": [
+          {
+            "name": "Block Quarantine to All",
+            "enabled": true,
+            "action": "drop",
+            "protocol": "all",
+            "src_networkconf_id": "quarantine_network",
+            "dst_networkconf_id": "any",
+            "logging": true,
+            "state_established": false,
+            "state_new": false
+          },
+          {
+            "name": "Allow Management to Quarantine",
+            "enabled": true,
+            "action": "accept",
+            "protocol": "all",
+            "src_networkconf_id": "management_network",
+            "dst_networkconf_id": "quarantine_network",
+            "logging": true,
+            "state_established": true,
+            "state_new": true
+          }
+        ]
+      }
+    ],
+    "bandwidth_profiles": [
+      {
+        "name": "iot_limited",
+        "download_enabled": true,
+        "download_limit": 10000,
+        "upload_enabled": true,
+        "upload_limit": 5000,
+        "priority": "normal"
+      },
+      {
+        "name": "security_priority",
+        "download_enabled": true,
+        "download_limit": 50000,
+        "upload_enabled": true,
+        "upload_limit": 25000,
+        "priority": "high"
+      },
+      {
+        "name": "guest_limited",
+        "download_enabled": true,
+        "download_limit": 20000,
+        "upload_enabled": true,
+        "upload_limit": 5000,
+        "priority": "low"
+      }
+    ],
+    "wireless_networks": [
+      {
+        "name": "SmartHome-Main",
+        "enabled": true,
+        "security": "wpapsk",
+        "wpa_mode": "wpa2",
+        "wpa_enc": "ccmp",
+        "passphrase": "CHANGE_THIS_PASSWORD",
+        "vlan": 20,
+        "vlan_enabled": true,
+        "hide_ssid": false,
+        "mac_filter_enabled": false,
+        "mac_filter_policy": "allow",
+        "schedule_enabled": false,
+        "guest_access": false,
+        "isolation": false,
+        "fast_roaming_enabled": true,
+        "pmf_mode": "optional",
+        "group_rekey": 3600,
+        "dtim_mode": "default",
+        "dtim_na": 1,
+        "dtim_ng": 1
+      },
+      {
+        "name": "SmartHome-IoT",
+        "enabled": true,
+        "security": "wpapsk",
+        "wpa_mode": "wpa2",
+        "wpa_enc": "ccmp",
+        "passphrase": "CHANGE_THIS_IOT_PASSWORD",
+        "vlan": 30,
+        "vlan_enabled": true,
+        "hide_ssid": false,
+        "mac_filter_enabled": true,
+        "mac_filter_policy": "allow",
+        "schedule_enabled": false,
+        "guest_access": false,
+        "isolation": true,
+        "fast_roaming_enabled": false,
+        "pmf_mode": "required",
+        "group_rekey": 3600,
+        "dtim_mode": "default",
+        "dtim_na": 3,
+        "dtim_ng": 3
+      },
+      {
+        "name": "SmartHome-Guest",
+        "enabled": true,
+        "security": "wpapsk",
+        "wpa_mode": "wpa2",
+        "wpa_enc": "ccmp",
+        "passphrase": "GUEST_PASSWORD_123",
+        "vlan": 50,
+        "vlan_enabled": true,
+        "hide_ssid": false,
+        "mac_filter_enabled": false,
+        "mac_filter_policy": "allow",
+        "schedule_enabled": true,
+        "schedule": {
+          "monday": {"enabled": true, "start": "08:00", "end": "22:00"},
+          "tuesday": {"enabled": true, "start": "08:00", "end": "22:00"},
+          "wednesday": {"enabled": true, "start": "08:00", "end": "22:00"},
+          "thursday": {"enabled": true, "start": "08:00", "end": "22:00"},
+          "friday": {"enabled": true, "start": "08:00", "end": "23:00"},
+          "saturday": {"enabled": true, "start": "09:00", "end": "23:00"},
+          "sunday": {"enabled": true, "start": "09:00", "end": "22:00"}
+        },
+        "guest_access": true,
+        "isolation": true,
+        "fast_roaming_enabled": false,
+        "pmf_mode": "optional",
+        "group_rekey": 1800,
+        "dtim_mode": "default",
+        "dtim_na": 1,
+        "dtim_ng": 1
+      }
+    ],
+    "port_profiles": [
+      {
+        "name": "Management_Ports",
+        "native_networkconf_id": "management_network",
+        "tagged_networkconf_ids": [],
+        "port_security_enabled": true,
+        "port_security_mac_address": [],
+        "storm_control_enabled": true,
+        "storm_control_rate": 100,
+        "poe_mode": "auto",
+        "isolation": false,
+        "egress_rate_limit_enabled": false,
+        "forward_unknown_multicast": false,
+        "forward_unknown_unicast": false
+      },
+      {
+        "name": "Trunk_Ports",
+        "native_networkconf_id": "management_network",
+        "tagged_networkconf_ids": [
+          "trusted_network",
+          "iot_network",
+          "security_network",
+          "guest_network",
+          "quarantine_network"
+        ],
+        "port_security_enabled": false,
+        "storm_control_enabled": true,
+        "storm_control_rate": 1000,
+        "poe_mode": "off",
+        "isolation": false,
+        "egress_rate_limit_enabled": false,
+        "forward_unknown_multicast": true,
+        "forward_unknown_unicast": true
+      },
+      {
+        "name": "IoT_Access_Ports",
+        "native_networkconf_id": "iot_network",
+        "tagged_networkconf_ids": [],
+        "port_security_enabled": true,
+        "port_security_mac_address": [],
+        "storm_control_enabled": true,
+        "storm_control_rate": 50,
+        "poe_mode": "auto",
+        "isolation": true,
+        "egress_rate_limit_enabled": true,
+        "egress_rate_limit_kbps": 10000,
+        "forward_unknown_multicast": false,
+        "forward_unknown_unicast": false
+      },
+      {
+        "name": "Security_Access_Ports",
+        "native_networkconf_id": "security_network",
+        "tagged_networkconf_ids": [],
+        "port_security_enabled": true,
+        "port_security_mac_address": [],
+        "storm_control_enabled": true,
+        "storm_control_rate": 200,
+        "poe_mode": "auto",
+        "isolation": true,
+        "egress_rate_limit_enabled": false,
+        "forward_unknown_multicast": false,
+        "forward_unknown_unicast": false
+      }
+    ],
+    "threat_management": {
+      "ips_enabled": true,
+      "ips_mode": "detection",
+      "dpi_enabled": true,
+      "honeypot_enabled": false,
+      "block_malicious_ips": true,
+      "block_known_exploits": true,
+      "block_dns_rebinding": true,
+      "block_multicast": false,
+      "suppress_alert_udp_1900": true
+    },
+    "traffic_identification": {
+      "enabled": true,
+      "dpi_enabled": true,
+      "categories": [
+        {
+          "name": "IoT_Traffic",
+          "enabled": true,
+          "applications": [
+            "Amazon Alexa",
+            "Google Assistant",
+            "Philips Hue",
+            "Nest",
+            "Ring",
+            "TP-Link Kasa"
+          ]
+        },
+        {
+          "name": "Security_Traffic",
+          "enabled": true,
+          "applications": [
+            "RTSP",
+            "ONVIF",
+            "Hikvision",
+            "Dahua"
+          ]
+        }
+      ]
+    },
+    "logging": {
+      "remote_syslog_enabled": true,
+      "remote_syslog_host": "192.168.10.100",
+      "remote_syslog_port": 514,
+      "remote_syslog_level": "info",
+      "netconsole_enabled": false,
+      "debug_enabled": false,
+      "debug_level": "warning"
+    }
+  }
+}
